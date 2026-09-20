@@ -1,0 +1,99 @@
+{
+  "name": "Github code verification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "iso-scan",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e7d7915e-58a5-4db2-bb9c-f493f1343fd3",
+      "name": "Webhook",
+      "webhookId": "4fa9e99c-f820-4ac9-8855-1caac52196f9"
+    },
+    {
+      "parameters": {
+        "jsCode": "let semgrepResults = $input.first().json.body.results || [];\n\n// Humne auditLog ko update kiya hai taake wo sirf \"PASS/FAIL\" nahi, balke details bhi store kare\nlet auditLog = {\n  \"A.8.24 (Cryptography/Secrets)\": { status: \"PASS\", details: \"-\" },\n  \"A.8.28 (Secure Coding/Injection)\": { status: \"PASS\", details: \"-\" },\n  \"A.8.4 (Access to Source Code)\": { status: \"PASS\", details: \"-\" },\n  \"A.8.8 (Vulnerability Management)\": { status: \"PASS\", details: \"-\" },\n  \"A.8.9 (Configuration Management)\": { status: \"PASS\", details: \"-\" }\n};\n\nfor (let finding of semgrepResults) {\n  let checkId = finding.check_id.toLowerCase();\n  \n  // Semgrep JSON se exact file, line aur remediation message nikal rahe hain\n  let file = finding.path;\n  let line = finding.start.line;\n  let message = finding.extra.message;\n  \n  // Isko HTML format mein khoobsurat bana diya\n  let failDetails = `<span style=\"font-size: 13px;\"><b>File:</b> ${file} (Line ${line})<br><br><b>Fix:</b> ${message}</span>`;\n  \n  if (checkId.includes(\"secret\") || checkId.includes(\"password\") || checkId.includes(\"crypto\")) {\n    auditLog[\"A.8.24 (Cryptography/Secrets)\"] = { status: \"FAIL\", details: failDetails };\n  }\n  \n  if (checkId.includes(\"sql\") || checkId.includes(\"injection\") || checkId.includes(\"xss\")) {\n    auditLog[\"A.8.28 (Secure Coding/Injection)\"] = { status: \"FAIL\", details: failDetails };\n  }\n  \n  if (checkId.includes(\"mutable-action-tag\") || checkId.includes(\"yaml\")) {\n    auditLog[\"A.8.9 (Configuration Management)\"] = { status: \"FAIL\", details: failDetails };\n  }\n}\n\n// Yahan Email Table design ho raha hai (ek naya column \"Issue Details & Remediation\" add kiya)\nlet emailBody = \"<h3>Automated ISO 27001 Code Scan Results</h3>\";\nemailBody += \"<p>New code was pushed to the repository. Here is the compliance mapping for the detected issues:</p>\";\nemailBody += \"<table border='1' cellpadding='10' style='border-collapse: collapse; text-align: left; max-width: 800px;'>\";\nemailBody += \"<tr style='background-color: #f3f4f6;'><th>ISO Control</th><th>Status</th><th>Issue Details & Remediation</th></tr>\";\n\nfor (let [control, data] of Object.entries(auditLog)) {\n  let color = data.status === \"FAIL\" ? \"red\" : \"green\";\n  let statusText = `<span style='color: ${color}; font-weight: bold;'>${data.status}</span>`;\n  \n  emailBody += `<tr>\n    <td style='white-space: nowrap;'><b>${control}</b></td>\n    <td>${statusText}</td>\n    <td>${data.details}</td>\n  </tr>`;\n}\n\nemailBody += \"</table>\";\nemailBody += \"<br><p>Please fix the failing controls to maintain compliance.</p>\";\n\nreturn [{ json: { emailBody: emailBody } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "13223ee8-4aa0-4505-aa9d-2d9459d805e7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "hassaankashif761@gmail.com",
+        "subject": "Security Alert: Code Push Compliance Scan",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6a72736d-6784-40da-a69f-d4bed4140ef8",
+      "name": "Send a message",
+      "webhookId": "35850032-d8dd-41c3-8b10-c46c03c06b40",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4z8kzhO7Om0XLulT",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c2a31f49-e28a-4838-8ad2-4ad04bfabdeb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "20cf75cd0417fe5be3c3d8dcf7163bcd4dd5f0947193527bf3d55f850ac76577"
+  },
+  "id": "0jFPxLPnNJs0J0ku",
+  "tags": []
+}

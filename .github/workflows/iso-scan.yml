@@ -1,0 +1,31 @@
+name: ISO 27001 Code Compliance Scan
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. Semgrep install karna
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep Scan
+        run: |
+          semgrep scan --config="p/security-audit" --config="p/secrets" --config="p/owasp-top-ten" --json -o results.json || true
+
+      - name: Send Results to n8n Webhook
+        run: |
+          curl -X POST -H "Content-Type: application/json" -d @results.json https://n8n.srv1465626.hstgr.cloud/webhook/iso-scan.yml

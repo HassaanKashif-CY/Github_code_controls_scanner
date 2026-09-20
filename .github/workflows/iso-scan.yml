@@ -28,4 +28,4 @@ jobs:
 
       - name: Send Results to n8n Webhook
         run: |
-          curl -X POST -H "Content-Type: application/json" -d @results.json https://n8n.srv1465626.hstgr.cloud/webhook/iso-scan
+          curl -X POST -H "Content-Type: application/json" -d @results.json https://n8n.srv1465626.hstgr.cloud/webhook-test/iso-scan

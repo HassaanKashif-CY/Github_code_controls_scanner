@@ -1,21 +1,17 @@
 import sqlite3
+import hashlib
 
-def connect_to_db():
-    # VULNERABILITY 1: Hardcoded Secret/Password
-    db_password = "SuperSecretPassword123!"
-    db_user = "admin"
-    print(f"Connecting to database with {db_user} and {db_password}")
-
-def get_user_data(username):
-    conn = sqlite3.connect('users.db')
+def login_user(username, password):
+    # VULNERABILITY 1: Weak Cryptography (MD5 is deprecated/unsafe)
+    hashed_pass = hashlib.md5(password.encode()).hexdigest()
+    
+    conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     
-    # VULNERABILITY 2: SQL Injection risk (String concatenation in query)
-    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    # VULNERABILITY 2: SQL Injection using Python f-strings
+    query = f"SELECT * FROM users WHERE user = '{username}' AND pass = '{hashed_pass}'"
     
+    # Direct execution of un-sanitized string
     cursor.execute(query)
+    
     return cursor.fetchall()
-
-if __name__ == "__main__":
-    connect_to_db()
-    get_user_data("test_user")
